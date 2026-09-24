@@ -2175,12 +2175,17 @@ function runExam(qs, dur, isResume) {
     }, 1000);
     
     // PERBAIKAN 2: Ubah interval monitoring siswa menjadi 3 menit (180.000 ms) sekali.
+   // PERBAIKAN: Matikan interval monitoring siswa secara total di frontend
+    // Ini memastikan peramban siswa tidak menembak server secara terus-menerus
     clearInterval(monitorInterval);
-    monitorInterval = setInterval(() => { 
-        google.script.run.updateClientProgress(activeExamId, user.ID, $('.q-nav-btn.answered').length, totalQ); 
-    }, 900000);
+    /* 
+       KODE DI BAWAH INI DIKOMENTARI (DIMATIKAN)
+       monitorInterval = setInterval(() => { 
+           google.script.run.updateClientProgress(activeExamId, user.ID, $('.q-nav-btn.answered').length, totalQ); 
+       }, 900000);
+    */
 
-    // PERBAIKAN 3: Autosave ke server dihapus, simpanan hanya fokus di LocalStorage (saveAnsLocal) untuk menghemat limit database Turso.
+    // PERBAIKAN 3: Autosave ke server dihapus, simpanan hanya fokus di LocalStorage
     clearInterval(autosaveInterval);
 }
     
