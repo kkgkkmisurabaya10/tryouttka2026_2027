@@ -571,8 +571,7 @@ function fetchLiveMonitor(isSilent = false) {
     monitorInterval = setInterval(() => {
         if ($('#monitor-grid').length > 0) fetchLiveMonitor(true);
         else clearInterval(monitorInterval);
-    }, 60000); // PERBAIKAN 4: Ubah dari 15000 (15 detik) menjadi 60000 (1 menit)
-}
+    }, 300000);
 
 // Fungsi untuk memuat kerangka Data Peserta beserta Filter Pencarian
     
@@ -2179,7 +2178,7 @@ function runExam(qs, dur, isResume) {
     clearInterval(monitorInterval);
     monitorInterval = setInterval(() => { 
         google.script.run.updateClientProgress(activeExamId, user.ID, $('.q-nav-btn.answered').length, totalQ); 
-    }, 180000); 
+    }, 900000);
 
     // PERBAIKAN 3: Autosave ke server dihapus, simpanan hanya fokus di LocalStorage (saveAnsLocal) untuk menghemat limit database Turso.
     clearInterval(autosaveInterval);
