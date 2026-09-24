@@ -1,6 +1,13 @@
-export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { turso } from '../../../lib/turso';
+
+// In-Memory Cache untuk menampung bank soal di RAM server Vercel
+// Ini mencegah 10.000 request baca ke database Turso saat ujian dimulai
+let cacheStore = {
+  examPack: {},
+  lastFetchTime: 0
+};
+const CACHE_TTL = 5 * 60 * 1000; // Cache bertahan 5 menit (300.000 ms)
 
 export async function POST(req) {
   try {
@@ -190,12 +197,38 @@ export async function POST(req) {
 
     if (action === 'getExamPack') {
       const eid = args[0]; const uid = args[1];
+      
+      // Validasi history tetap dari database (spesifik per siswa)
       const history = await turso.execute({ sql: "SELECT * FROM Results WHERE ExamID=? AND SiswaID=?", args: [eid, uid]});
       if(history.rows.length > 0) return NextResponse.json({status: 'error', msg: 'Ujian sudah dikerjakan.'});
-      const examInfo = await turso.execute({ sql: "SELECT * FROM Exams WHERE ExamID=?", args:[eid] });
-      const qs = await turso.execute({ sql: "SELECT * FROM Questions WHERE ExamID=?", args:[eid] });
-      const cleanQ = qs.rows.map(q => ({ QID: q.QID, Tipe: q.Tipe, Pertanyaan: q.Pertanyaan, Options: q.Options, Nomor: q.Nomor, Extra: [] }));
-      return NextResponse.json({ status: 'success', data: cleanQ, duration: examInfo.rows[0].Durasi, judul: examInfo.rows[0].Judul, token: examInfo.rows[0].Token });
+      
+      const now = Date.now();
+      
+      // Mengambil dari Turso HANYA jika data cache kosong atau sudah kedaluwarsa (> 5 menit)
+      if (!cacheStore.examPack[eid] || (now - cacheStore.lastFetchTime > CACHE_TTL)) {
+          const examInfo = await turso.execute({ sql: "SELECT * FROM Exams WHERE ExamID=?", args:[eid] });
+          const qs = await turso.execute({ sql: "SELECT * FROM Questions WHERE ExamID=?", args:[eid] });
+          
+          const cleanQ = qs.rows.map(q => ({ QID: q.QID, Tipe: q.Tipe, Pertanyaan: q.Pertanyaan, Options: q.Options, Nomor: q.Nomor, Extra: [] }));
+          
+          cacheStore.examPack[eid] = {
+              data: cleanQ, 
+              duration: examInfo.rows[0].Durasi, 
+              judul: examInfo.rows[0].Judul, 
+              token: examInfo.rows[0].Token
+          };
+          cacheStore.lastFetchTime = now;
+      }
+
+      // Kirim respons langsung dari memori Cache
+      const cachedExam = cacheStore.examPack[eid];
+      return NextResponse.json({ 
+          status: 'success', 
+          data: cachedExam.data, 
+          duration: cachedExam.duration, 
+          judul: cachedExam.judul, 
+          token: cachedExam.token 
+      });
     }
 
     if (action === 'submitExam') {
@@ -314,21 +347,10 @@ export async function POST(req) {
        return NextResponse.json({ status: 'success', msg: 'Berhasil dilaporkan' });
     }
 
-    // Ganti blok ini di app/api/action/route.js:
-
     if (action === 'updateClientProgress') {
-        const [examId, userId, terjawab, totalQ] = args;
-        
-        try {
-            await turso.execute({ 
-                sql: "UPDATE Users SET Terjawab=?, TotalSoal=?, Status='Sedang Mengerjakan' WHERE ID=?", 
-                args: [terjawab, totalQ, userId] 
-            });
-        } catch (e) {
-            // HAPUS SEMUA ALTER TABLE DI SINI. 
-            // Pastikan Anda sudah menjalankan ALTER TABLE ini secara manual dari konsol Turso CLI sekali saja sebelum ujian dimulai.
-            console.error("Gagal update progress siswa:", e);
-        }
+        // Blok ini telah dinonaktifkan sepenuhnya (tidak melakukan eksekusi ke Turso).
+        // Fungsi ini akan mengembalikan status sukses agar frontend tidak error,
+        // namun menghentikan lonjakan kuota write ke database.
         return NextResponse.json({ status: 'success' });
     }
 
