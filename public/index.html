@@ -572,7 +572,7 @@ function fetchLiveMonitor(isSilent = false) {
         if ($('#monitor-grid').length > 0) fetchLiveMonitor(true);
         else clearInterval(monitorInterval);
     }, 300000);
-
+    }
 // Fungsi untuk memuat kerangka Data Peserta beserta Filter Pencarian
     
 function renderUsers(users) {
@@ -1467,10 +1467,7 @@ function renderContent(page) {
         let schoolTable = `<div class="table-responsive"><table class="table table-sm table-hover text-center"><thead><tr class="table-light"><th>Rank</th><th>Sekolah</th><th>Rata-rata CBT</th></tr></thead><tbody>`;
         if(gData.schoolRanks && gData.schoolRanks.length > 0) {
             if (isGuru) {
-                // Tambahkan validasi fallback untuk menghindari Trim() error
-                const mySekolah = String(user.Sekolah || '').trim().toLowerCase();
-                const myRankIndex = gData.schoolRanks.findIndex(s => String(s.Sekolah || '').trim().toLowerCase() === mySekolah);
-                
+                const myRankIndex = gData.schoolRanks.findIndex(s => s.Sekolah === user.Sekolah);
                 if (myRankIndex !== -1) {
                     const mySchool = gData.schoolRanks[myRankIndex];
                     schoolTable += `<tr class="bg-warning bg-opacity-25 fw-bold"><td>${myRankIndex + 1}</td><td class="text-start">${mySchool.Sekolah}</td><td><span class="badge bg-primary rounded-pill">${Number(mySchool.RataRata).toFixed(2)}</span></td></tr>`;
