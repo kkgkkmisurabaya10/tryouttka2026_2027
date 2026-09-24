@@ -29,12 +29,12 @@ export async function POST(req) {
         };
 
         const schoolRankQuery = await turso.execute(`
-            SELECT u.Sekolah, AVG(r.TotalNilai) as RataRata 
+            SELECT TRIM(u.Sekolah) as Sekolah, AVG(r.TotalNilai) as RataRata 
             FROM Results r 
             JOIN Users u ON r.SiswaID = u.ID 
             JOIN Exams e ON r.ExamID = e.ExamID
-            WHERE e.Mapel != 'SURVEY' ${role === 'guru' ? "AND e.ShowStats IN ('Yes', 'Aktif')" : ""}
-            GROUP BY u.Sekolah 
+            WHERE e.Mapel != 'SURVEY' AND TRIM(u.Sekolah) != '' ${role === 'guru' ? "AND e.ShowStats IN ('Yes', 'Aktif')" : ""}
+            GROUP BY TRIM(u.Sekolah) 
             ORDER BY RataRata DESC
         `);
         output.schoolRanks = schoolRankQuery.rows;
@@ -59,12 +59,25 @@ export async function POST(req) {
         }
 
       } else if (role === 'siswa') {
-        output.availableExams = exams.rows.filter(e => e.Status === 'Aktif');
+        // Ambil histori ujian anak ini
         const history = await turso.execute({ 
           sql: "SELECT r.ResultID, r.ExamID, r.WaktuSubmit, r.TotalNilai as Nilai, e.Judul, e.AllowDownloadR, e.AllowDownloadQ, e.ShowStats, r.Pelanggaran FROM Results r JOIN Exams e ON r.ExamID = e.ExamID WHERE r.SiswaID = ? AND e.Mapel != 'SURVEY'", 
           args: [userId] 
         });
         output.history = history.rows;
+        
+        // Pengecekan IsFinished berdasarkan histori untuk ditampilkan di dashboard siswa
+        const historyExamIds = history.rows.map(h => h.ExamID);
+        const activeExams = exams.rows.filter(e => e.Status === 'Aktif');
+        
+        output.availableExams = activeExams.map(e => {
+            return {
+                ...e,
+                IsFinished: historyExamIds.includes(e.ExamID),
+                // Opsional: Anda dapat menambahkan logika IsExpired di sini dengan membandingkan e.EndDate jika format ISO8601
+                IsExpired: e.EndDate && new Date() > new Date(e.EndDate)
+            };
+        });
       }
       return NextResponse.json({ status: 'success', data: output });
     }
