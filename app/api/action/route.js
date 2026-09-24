@@ -314,6 +314,8 @@ export async function POST(req) {
        return NextResponse.json({ status: 'success', msg: 'Berhasil dilaporkan' });
     }
 
+    // Ganti blok ini di app/api/action/route.js:
+
     if (action === 'updateClientProgress') {
         const [examId, userId, terjawab, totalQ] = args;
         
@@ -323,16 +325,9 @@ export async function POST(req) {
                 args: [terjawab, totalQ, userId] 
             });
         } catch (e) {
-            try { await turso.execute("ALTER TABLE Users ADD COLUMN Terjawab INTEGER DEFAULT 0"); } catch (err) {}
-            try { await turso.execute("ALTER TABLE Users ADD COLUMN TotalSoal INTEGER DEFAULT 0"); } catch (err) {}
-            try { await turso.execute("ALTER TABLE Users ADD COLUMN Status TEXT DEFAULT 'Offline'"); } catch (err) {}
-            
-            try {
-                await turso.execute({ 
-                    sql: "UPDATE Users SET Terjawab=?, TotalSoal=?, Status='Sedang Mengerjakan' WHERE ID=?", 
-                    args: [terjawab, totalQ, userId] 
-                });
-            } catch (err) {}
+            // HAPUS SEMUA ALTER TABLE DI SINI. 
+            // Pastikan Anda sudah menjalankan ALTER TABLE ini secara manual dari konsol Turso CLI sekali saja sebelum ujian dimulai.
+            console.error("Gagal update progress siswa:", e);
         }
         return NextResponse.json({ status: 'success' });
     }
