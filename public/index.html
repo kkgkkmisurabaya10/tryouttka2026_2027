@@ -2291,6 +2291,10 @@ function processSubmission(retryCount = 0) {
         });
     } catch(e) { console.error("Error collecting", e); }
     
+    // Buat format YYYY-MM-DD HH:MM:SS sesuai waktu device siswa
+    const d = new Date();
+    const localTime = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+    
     google.script.run.withSuccessHandler((res) => {
         examSubmitting = false; btn.prop('disabled', false).html(originalText);
         if (res.status === 'success') {
@@ -2317,8 +2321,9 @@ function processSubmission(retryCount = 0) {
         } else { Swal.fire('Gagal', res.msg || 'Terjadi kesalahan sistem.', 'error'); }
     }).withFailureHandler((err) => {
         if (retryCount < 3) { setTimeout(() => processSubmission(retryCount + 1), 3000); } 
-        else { examSubmitting = false; btn.prop('disabled', false).html(originalText); Swal.fire('Koneksi Terputus', 'Gagal menghubungi server setelah beberapa percobaan.', 'error'); }
-    }).submitExam(user.ID, activeExamId, ans, violationCount);
+        else { examSubmitting = false; btn.prop('disabled', false).html(originalText); Swal.fire('Koneksi Terputus', 'Gagal menghubungi server.', 'error'); }
+    // TAMBAHKAN argumen localTime di sini:
+    }).submitExam(user.ID, activeExamId, ans, violationCount, localTime);
 }
 
 // ---------------- ALUR SURVEI EVALUASI (Countdown -> Tampil -> Kirim) ----------------
@@ -2441,6 +2446,12 @@ function submitSurvey() {
     });
     if(!allAnswered) return Swal.fire('Belum Lengkap', 'Mohon isi tanggapan untuk semua pernyataan survei sebelum mengirim.', 'warning');
     
+    if(!allAnswered) return Swal.fire('Belum Lengkap', 'Mohon isi tanggapan untuk semua pernyataan.', 'warning');
+    
+    // Buat format YYYY-MM-DD HH:MM:SS sesuai waktu device siswa
+    const d = new Date();
+    const localTime = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
+    
     showLoad(true);
     google.script.run.withSuccessHandler(res => {
         showLoad(false); $('#view-survey').addClass('hidden');
@@ -2448,7 +2459,7 @@ function submitSurvey() {
         Swal.fire({ title: 'Terima Kasih!', text: 'Respon evaluasi survei Anda telah kami terima dengan baik.', icon: 'success', confirmButtonColor: '#0f5132', allowOutsideClick: false }).then(() => {
             $('#view-dashboard').removeClass('hidden'); loadPage('siswa-home');
         });
-    }).submitSurveyResponse(user.ID, window.activeSurveyData.header.ExamID, answers);
+    }).submitSurveyResponse(user.ID, window.activeSurveyData.header.ExamID, answers, localTime);
 }
     // Fungsi untuk merapikan teks HTML yang bocor dari hasil copy-paste
 function decodeHTML(htmlText) {
