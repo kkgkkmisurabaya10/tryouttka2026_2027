@@ -232,7 +232,8 @@ export async function POST(req) {
     }
 
     if (action === 'submitExam') {
-       const uid = args[0]; const eid = args[1]; const answers = args[2]; const violations = args[3];
+       // Tambahkan parameter waktuSubmit (args[4])
+       const uid = args[0]; const eid = args[1]; const answers = args[2]; const violations = args[3]; const waktuSubmit = args[4];
        
        let rawTotalScore = 0; 
        let detailLog = [];
@@ -291,9 +292,10 @@ export async function POST(req) {
        let finalScore100 = maxPossibleTotalScore > 0 ? (rawTotalScore / maxPossibleTotalScore) * 100 : 0;
        finalScore100 = Math.round(finalScore100 * 100) / 100;
 
+       // Tambahkan kolom WaktuSubmit pada query SQL
        await turso.execute({ 
-           sql: "INSERT INTO Results (ResultID, SiswaID, ExamID, TotalNilai, Detail, Pelanggaran) VALUES (?, ?, ?, ?, ?, ?)", 
-           args: ['RES' + Date.now(), uid, eid, finalScore100, JSON.stringify(detailLog), violations > 0 ? `Pelanggaran: ${violations}x` : "-"] 
+           sql: "INSERT INTO Results (ResultID, SiswaID, ExamID, TotalNilai, Detail, Pelanggaran, WaktuSubmit) VALUES (?, ?, ?, ?, ?, ?, ?)", 
+           args: ['RES' + Date.now(), uid, eid, finalScore100, JSON.stringify(detailLog), violations > 0 ? `Pelanggaran: ${violations}x` : "-", waktuSubmit] 
        });
        
        try { await turso.execute({ sql: "UPDATE Users SET Status='Selesai Ujian TKA', Terjawab=0 WHERE ID=?", args: [uid] }); } catch(e){}
