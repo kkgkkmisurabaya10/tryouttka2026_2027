@@ -185,10 +185,13 @@ export async function POST(req) {
     }
 
     if (action === 'submitSurveyResponse') {
-        const uid = args[0]; const sid = args[1]; const answers = args[2];
+        // Tambahkan parameter waktuSubmit (args[3])
+        const uid = args[0]; const sid = args[1]; const answers = args[2]; const waktuSubmit = args[3];
+        
+        // Tambahkan kolom WaktuSubmit pada query SQL
         await turso.execute({ 
-           sql: "INSERT INTO Results (ResultID, SiswaID, ExamID, TotalNilai, Detail, Pelanggaran) VALUES (?, ?, ?, 0, ?, 'Survey Response')", 
-           args: ['SRES' + Date.now(), uid, sid, JSON.stringify(answers)] 
+           sql: "INSERT INTO Results (ResultID, SiswaID, ExamID, TotalNilai, Detail, Pelanggaran, WaktuSubmit) VALUES (?, ?, ?, 0, ?, 'Survey Response', ?)", 
+           args: ['SRES' + Date.now(), uid, sid, JSON.stringify(answers), waktuSubmit] 
         });
         
         try { await turso.execute({ sql: "UPDATE Users SET Status='Survei Selesai', Terjawab=TotalSoal WHERE ID=?", args: [uid] }); } catch(e){}
